@@ -1,53 +1,56 @@
 import streamlit as st
-from pytrends.request import TrendReq
+import feedparser
 import pandas as pd
 
 st.set_page_config(page_title="Aalto-Vuo Trend Hub", layout="wide")
 
-st.title("🚀 Aalto-Vuo: Trendi-analyysi")
-st.write("Jos data ei lataudu, kokeile vaihtaa aluetta (esim. United States on varmin).")
+st.title("🚀 Aalto-Vuo: Trendi-analyysi (RSS-Varmistettu)")
+st.write("Tämä versio käyttää RSS-syötteitä, jotka toimivat varmemmin pilvipalveluissa.")
 
-# Maiden koodit, jotka toimivat parhaiten
-REGIONS = {
-    "Suomi": "finland",
-    "USA": "united_states",
-    "Ruotsi": "sweden",
-    "Saksa": "germany",
-    "Iso-Britannia": "united_kingdom"
+# RSS-syötteiden osoitteet (Maa-koodit)
+RSS_FEEDS = {
+    "Suomi": "https://trends.google.com/trends/trendingsearches/daily/rss?geo=FI",
+    "USA": "https://trends.google.com/trends/trendingsearches/daily/rss?geo=US",
+    "Saksa": "https://trends.google.com/trends/trendingsearches/daily/rss?geo=DE",
+    "Ruotsi": "https://trends.google.com/trends/trendingsearches/daily/rss?geo=SE"
 }
 
-selected_region_name = st.sidebar.selectbox("Markkina-alue:", list(REGIONS.keys()))
-selected_region = REGIONS[selected_region_name]
+selected_region = st.sidebar.selectbox("Markkina-alue:", list(RSS_FEEDS.keys()))
 
-@st.cache_data(ttl=1200)
-def get_safe_trends(region):
+def get_rss_trends(url):
     try:
-        # Lisätään timeout ja useita yrityksiä
-        pytrends = TrendReq(hl='fi-FI', tz=360, timeout=(10,25))
-        # Daily searches on paljon varmempi tapa saada dataa kuin kategoriat
-        data = pytrends.trending_searches(pn=region)
-        return data
+        feed = feedparser.parse(url)
+        trends = []
+        for entry in feed.entries:
+            # RSS-syötteessä on usein hakuvolyymi mukana
+            trends.append({
+                "Trendi": entry.title,
+                "Kuvaus": entry.description,
+                "Linkki": entry.link
+            })
+        return pd.DataFrame(trends)
     except Exception as e:
         return str(e)
 
-if st.sidebar.button("Analysoi Markkinat"):
-    with st.spinner('Haetaan tuoreimpia virtauksia...'):
-        trends_df = get_safe_trends(selected_region)
+if st.sidebar.button("Etsi Trendit"):
+    with st.spinner('Haetaan RSS-dataa...'):
+        df = get_rss_trends(RSS_FEEDS[selected_region])
         
-        if isinstance(trends_df, pd.DataFrame):
-            st.success(f"Löytyi päivän kuumimmat aiheet alueelta {selected_region_name}")
+        if isinstance(df, pd.DataFrame) and not df.empty:
+            st.success(f"Löytyi {len(df)} kuumaa aihetta!")
             
-            # Näytetään tulokset nätisti
-            for i, row in trends_df.iterrows():
-                trend = row[0]
-                with st.expander(f"🔥 {trend}"):
-                    col1, col2, col3 = st.columns(3)
-                    with col1:
-                        st.link_button("Amazon", f"https://www.amazon.com/s?k={trend}")
-                    with col2:
-                        st.link_button("eBay", f"https://www.ebay.com/sch/i.html?_nkw={trend}")
-                    with col3:
-                        st.link_button("Google Search", f"https://www.google.com/search?q={trend}")
+            for i, row in df.iterrows():
+                with st.expander(f"🔥 {row['Trendi']}"):
+                    st.write(f"Analyysi: {row['Kuvaus']}")
+                    
+                    c1, c2, c3 = st.columns(3)
+                    with c1:
+                        st.link_button("Amazon", f"https://www.amazon.com/s?k={row['Trendi']}")
+                    with c2:
+                        st.link_button("eBay", f"https://www.ebay.com/sch/i.html?_nkw={row['Trendi']}")
+                    with c3:
+                        st.link_button("Lue lisää", row['Linkki'])
         else:
-            st.error("Google Trends hylkäsi pyynnön. Tämä johtuu usein palvelimen IP-osoitteesta.")
-            st.info("VINKKI: Kokeile USA-asetusta, se on vakain.")
+            st.error("Datan haku epäonnistui RSS-reitilläkin. Google saattaa rajoittaa liikennettä juuri nyt.")
+
+st.sidebar.info("Vinkki: Jos käytät puhelinta, kokeile virkistää sivu (Refresh).")
