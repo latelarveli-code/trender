@@ -2,45 +2,79 @@ import streamlit as st
 import requests
 import pandas as pd
 
-# 1. Ulkoasuasetukset (Arkkitehtoninen minimalismi)
+# 1. Ulkoasuasetukset (Arkkitehtoninen minimalismi & Tumma teema)
 st.set_page_config(page_title="Aalto-Vuo | Intelligence", layout="wide")
 
 st.markdown("""
     <style>
-    .main { background-color: #0e1117; }
-    .stSecondaryBlock { background-color: #1a1c23; }
-    h1 { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; font-weight: 200; color: #ffffff; }
-    .stMetric { background-color: #161b22; border-radius: 5px; padding: 10px; border: 1px solid #30363d; }
+    /* Taustan ja tekstin perusvärit */
+    .stApp { background-color: #0e1117; }
+    h1, h2, h3, p, span, label { color: #e6edf3 !important; font-family: 'Helvetica Neue', Arial, sans-serif; }
+    
+    /* Korttimainen ulkoasu trendeille */
+    div[data-testid="stVerticalBlockBorderWrapper"] {
+        background-color: #161b22;
+        border: 1px solid #30363d;
+        border-radius: 8px;
+        padding: 20px;
+        margin-bottom: 15px;
+    }
+
+    /* Metriikkalaatikot */
+    div[data-testid="stMetric"] {
+        background-color: #0d1117;
+        border: 1px solid #30363d;
+        padding: 15px;
+        border-radius: 10px;
+    }
+
+    /* Sivupalkin tyylittely */
+    section[data-testid="stSidebar"] {
+        background-color: #010409;
+        border-right: 1px solid #30363d;
+    }
     </style>
-    """, unsafe_allow_stdio=True)
+    """, unsafe_allow_html=True)
 
-st.title("AALTO-VUO | INNOVATION INTELLIGENCE")
-st.write("Analysoidaan globaaleja signaaleja ja kaupallisia automaatiomahdollisuuksia.")
-
-# 2. AI-Agentin analyysilogiikka
+# 2. AI-Agentin analyysilogiikka (Tämä on sovelluksen "aivot")
 def ai_agent_analysis(title, score):
-    # Simuloitu agentti, joka antaa strategisia neuvoja otsikon perusteella
+    # Luokitellaan trendi ja ehdotetaan liiketoimintamahdollisuutta
+    title_lc = title.lower()
+    
     analysis = {
-        "score_level": "Korkea" if score > 150 else "Vakaa",
-        "action": "Tarkkaile kehitystä",
-        "service_idea": "Prosessi-automaatio"
+        "priority": "KORKEA" if score > 150 else "NORMAALI",
+        "category": "Yleinen innovaatio",
+        "automation_potential": "Matala",
+        "service_idea": "Seuraa teknologian kypsymistä."
     }
     
-    title_lc = title.lower()
-    if "ai" in title_lc or "learning" in title_lc:
-        analysis["service_idea"] = "AI-integraatio olemassa olevaan asiakasdataan."
-    elif "tool" in title_lc or "language" in title_lc:
-        analysis["service_idea"] = "Kehitysympäristön automaatio ja workflow-optimointi."
-    elif "legal" in title_lc or "policy" in title_lc:
-        analysis["service_idea"] = "Säädöstenmukaisuuden (Compliance) seuranta-agentti."
-    
+    if any(keyword in title_lc for keyword in ["ai", "gpt", "model", "learning", "neural"]):
+        analysis["category"] = "Tekoäly & Koneoppiminen"
+        analysis["automation_potential"] = "ERITTÄIN KORKEA"
+        analysis["service_idea"] = "AI-agentin rakentaminen asiakasprosessin päälle."
+    elif any(keyword in title_lc for keyword in ["tool", "workflow", "git", "automation", "script"]):
+        analysis["category"] = "Työnkulun optimointi"
+        analysis["automation_potential"] = "KORKEA"
+        analysis["service_idea"] = "Toistuvien manuaalisten tehtävien automatisointi."
+    elif any(keyword in title_lc for keyword in ["legal", "policy", "law", "copyright", "legitimate"]):
+        analysis["category"] = "Säädökset & Juridiikka"
+        analysis["automation_potential"] = "KOHTALAINEN"
+        analysis["service_idea"] = "Automaattinen vaatimustenmukaisuus-tarkastus (Compliance)."
+    elif any(keyword in title_lc for keyword in ["web", "framework", "js", "react", "html"]):
+        analysis["category"] = "Verkkokehitys"
+        analysis["automation_potential"] = "KORKEA"
+        analysis["service_idea"] = "Skaalautuvat SaaS-arkkitehtuuripalvelut."
+
     return analysis
 
+# 3. Datan haku
 @st.cache_data(ttl=600)
 def get_hacker_news_trends():
     try:
+        # Haetaan parhaat tarinat (Top Stories)
         top_stories_url = "https://hacker-news.firebaseio.com/v0/topstories.json"
-        story_ids = requests.get(top_stories_url, timeout=10).json()[:15]
+        response = requests.get(top_stories_url, timeout=10)
+        story_ids = response.json()[:12] # Haetaan 12 tuoreinta
         
         trends = []
         for s_id in story_ids:
@@ -53,40 +87,47 @@ def get_hacker_news_trends():
                     "score": story.get('score', 0)
                 })
         return pd.DataFrame(trends)
-    except:
+    except Exception as e:
         return pd.DataFrame()
 
-# 3. Pääkäyttöliittymä
-if st.sidebar.button("KÄYNNISTÄ SKANNAUS"):
-    with st.spinner('Agentti skannaa verkkoa...'):
+# 4. Käyttöliittymän rakentaminen
+st.title("AALTO-VUO | INNOVATION INTELLIGENCE")
+st.write("---")
+
+# Sivupalkin ohjaimet
+st.sidebar.title("KOMENTOKESKUS")
+st.sidebar.write("Project Aalto-Vuo v1.5")
+if st.sidebar.button("KÄYNNISTÄ ANALYYSI", use_container_width=True):
+    with st.spinner('Agentti louhii globaaleja signaaleja...'):
         df = get_hacker_news_trends()
         
         if not df.empty:
             for i, row in df.iterrows():
+                # Ajetaan jokainen löydös AI-agentin läpi
                 analysis = ai_agent_analysis(row['title'], row['score'])
                 
-                # Visualisointi korteissa
+                # Luodaan visuaalinen kortti jokaiselle trendille
                 with st.container(border=True):
-                    col_text, col_metrics = st.columns([3, 1])
+                    col_main, col_stats = st.columns([3, 1])
                     
-                    with col_text:
+                    with col_main:
                         st.subheader(row['title'])
-                        st.caption(f"Lähde: Hacker News | ID: {row['id']}")
-                        st.markdown(f"**AI Agentin ehdotus:** *{analysis['service_idea']}*")
+                        st.write(f"**Kategoria:** {analysis['category']}")
+                        st.info(f"💡 **AUTOMAATIO-IDEA:** {analysis['service_idea']}")
                         
-                        c1, c2 = st.columns(2)
-                        with c1:
-                            st.link_button("LUE ALKUPERÄINEN", row['url'], use_container_width=True)
-                        with c2:
-                            st.link_button("AMAZON TRENDS", f"https://www.amazon.com/s?k={row['title']}", use_container_width=True)
+                        # Napit
+                        b1, b2 = st.columns(2)
+                        with b1:
+                            st.link_button("LUE LÄHDE", row['url'], use_container_width=True)
+                        with b2:
+                            st.link_button("MARKKINAHAKU", f"https://www.google.com/search?q={row['title']}+commercial+use", use_container_width=True)
                     
-                    with col_metrics:
-                        st.metric("Pisteet", row['score'], delta=f"{analysis['score_level']} priorit")
-                        st.write("---")
-                        st.write(f"**Status:** {analysis['action']}")
+                    with col_stats:
+                        st.metric("SUOSIO", row['score'], delta=analysis['priority'])
+                        st.write("**Potentiaali:**")
+                        st.write(analysis['automation_potential'])
         else:
-            st.warning("Yhteys katkesi. Yritä uudelleen.")
+            st.warning("Dataa ei saatu haettua. Tarkista yhteys.")
 
 st.sidebar.divider()
-st.sidebar.markdown("### AALTO-VUO PROTOTYPE V1.5")
-st.sidebar.write("Fokus: Low-cost automaatiopalvelut ja skaalautuvuus.")
+st.sidebar.caption("Focus: Scalable Automation & Market Arbitrage")
