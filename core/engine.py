@@ -2,23 +2,27 @@ import requests
 import pandas as pd
 
 def get_market_signals():
-    # CryptoPanic API (Ilmainen versio toimii ilman avaintakin rajoitetusti, 
-    # mutta suosittelen hakemaan ilmaisen API-avaimen heiltä)
-    url = "https://cryptopanic.com/api/v1/posts/?auth_token=TAALA_ILMAINEN_AVAIN&public=true"
+    # CryptoPanic API - voit lisätä oman avaimen tähän kohtaan
+    # Jos jätät 'auth_token=' tyhjäksi, se toimii rajoitetusti
+    api_key = "" 
+    url = f"https://cryptopanic.com/api/v1/posts/?auth_token={api_key}&public=true"
     
     try:
         response = requests.get(url, timeout=10)
-        posts = response.json().get('results', [])[:10]
+        posts = response.json().get('results', [])[:6] # Haetaan 6 kuuminta
         
         signals = []
         for p in posts:
-            coin = p.get('currencies', [None])[0]
-            coin_code = coin.get('code') if coin else "BTC"
+            currencies = p.get('currencies', [])
+            coin_code = currencies[0].get('code') if currencies else "BTC"
             
-            # Haetaan hinta (ilmainen haku Binance API:sta)
-            price_url = f"https://api.binance.com/api/v3/ticker/price?symbol={coin_code}USDT"
-            price_data = requests.get(price_url).json()
-            price = price_data.get('price', "N/A")
+            # Haetaan hinta Binancesta
+            try:
+                price_url = f"https://api.binance.com/api/v3/ticker/price?symbol={coin_code}USDT"
+                price_data = requests.get(price_url, timeout=2).json()
+                price = f"{float(price_data['price']):.2f}" if 'price' in price_data else "N/A"
+            except:
+                price = "Check Live"
 
             signals.append({
                 "title": p.get('title'),
@@ -26,8 +30,9 @@ def get_market_signals():
                 "coin": coin_code,
                 "price": price,
                 "sentiment": p.get('votes', {}).get('positive', 0),
-                "source": p.get('domain')
+                "source": p.get('domain', 'CryptoNews')
             })
         return pd.DataFrame(signals)
-    except:
+    except Exception as e:
+        print(f"Error fetching data: {e}")
         return pd.DataFrame()
