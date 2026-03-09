@@ -9,32 +9,31 @@ def get_fear_and_greed():
         return {"value": "50", "value_classification": "Neutral"}
 
 def get_market_signals():
-    # HUOM: Hae ilmainen avain osoitteesta https://cryptopanic.com/developers/api/
-    # Ja sijoita se tähän:
+    # SIJOITA AVAIMESI TÄHÄN
     api_key = "1d8b5e3e1e4ea7c51e784082488ac85410bdfc54" 
     
-    # Jos avainta ei ole, käytetään varalähdettä tai julkista feediä
-    url = f"https://cryptopanic.com/api/v1/posts/?auth_token={api_key}&public=true&kind=news"
+    # Haetaan uutiset, jotka sisältävät valuuttatietoa ja positiivista nostetta
+    url = f"https://cryptopanic.com/api/v1/posts/?auth_token={api_key}&kind=news&filter=hot"
     
     try:
         response = requests.get(url, timeout=10)
         if response.status_code != 200:
             return pd.DataFrame()
             
-        posts = response.json().get('results', [])[:8]
+        posts = response.json().get('results', [])[:10]
         
         signals = []
         for p in posts:
             currencies = p.get('currencies', [])
             coin_code = currencies[0].get('code') if currencies else "BTC"
             
-            # Binance hinta-haku
+            # Haetaan tarkka hinta Binancesta
             try:
                 price_url = f"https://api.binance.com/api/v3/ticker/price?symbol={coin_code}USDT"
-                price_data = requests.get(price_url, timeout=2).json()
-                price = f"{float(price_data['price']):.2f}" if 'price' in price_data else "Check"
+                p_resp = requests.get(price_url, timeout=2).json()
+                price = f"{float(p_resp['price']):.4f}" if 'price' in p_resp else "N/A"
             except:
-                price = "Live"
+                price = "Check"
 
             signals.append({
                 "title": p.get('title'),
@@ -42,6 +41,7 @@ def get_market_signals():
                 "coin": coin_code,
                 "price": price,
                 "sentiment": p.get('votes', {}).get('positive', 0),
+                "negative": p.get('votes', {}).get('negative', 0),
                 "source": p.get('domain', 'CryptoNews')
             })
         return pd.DataFrame(signals)
