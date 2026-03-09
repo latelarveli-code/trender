@@ -1,20 +1,33 @@
 import requests
 import pandas as pd
 
-def get_innovation_stream(limit=20):
+def get_market_signals():
+    # CryptoPanic API (Ilmainen versio toimii ilman avaintakin rajoitetusti, 
+    # mutta suosittelen hakemaan ilmaisen API-avaimen heiltä)
+    url = "https://cryptopanic.com/api/v1/posts/?auth_token=TAALA_ILMAINEN_AVAIN&public=true"
+    
     try:
-        url = "https://hacker-news.firebaseio.com/v0/topstories.json"
-        ids = requests.get(url, timeout=5).json()[:limit]
-        stream = []
-        for i in ids:
-            item = requests.get(f"https://hacker-news.firebaseio.com/v0/item/{i}.json", timeout=5).json()
-            if item and 'title' in item:
-                stream.append({
-                    "title": item['title'],
-                    "url": item.get('url', f"https://news.ycombinator.com/item?id={i}"),
-                    "score": item.get('score', 0),
-                    "id": i
-                })
-        return pd.DataFrame(stream)
-    except Exception as e:
+        response = requests.get(url, timeout=10)
+        posts = response.json().get('results', [])[:10]
+        
+        signals = []
+        for p in posts:
+            coin = p.get('currencies', [None])[0]
+            coin_code = coin.get('code') if coin else "BTC"
+            
+            # Haetaan hinta (ilmainen haku Binance API:sta)
+            price_url = f"https://api.binance.com/api/v3/ticker/price?symbol={coin_code}USDT"
+            price_data = requests.get(price_url).json()
+            price = price_data.get('price', "N/A")
+
+            signals.append({
+                "title": p.get('title'),
+                "url": p.get('url'),
+                "coin": coin_code,
+                "price": price,
+                "sentiment": p.get('votes', {}).get('positive', 0),
+                "source": p.get('domain')
+            })
+        return pd.DataFrame(signals)
+    except:
         return pd.DataFrame()
