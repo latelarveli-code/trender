@@ -11,39 +11,28 @@ def apply_launch_theme():
             font-family: 'Space Grotesk', sans-serif; 
         }
         
-        /* Kortit: Lasiefekti */
         .card {
-            background: rgba(255, 255, 255, 0.03);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            border-radius: 20px;
-            padding: 30px;
-            margin-bottom: 25px;
-            transition: all 0.4s ease;
-        }
-        .card:hover {
-            border-color: #d4af37;
-            background: rgba(212, 175, 55, 0.05);
-            transform: translateY(-5px);
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 15px;
+            padding: 25px;
+            margin-bottom: 20px;
         }
 
-        /* Isot otsikot */
-        h1 { font-weight: 700; letter-spacing: -2px; color: #d4af37 !important; text-transform: uppercase; }
+        h1 { font-weight: 700; color: #d4af37 !important; text-transform: uppercase; letter-spacing: -1px; }
         
-        /* Napit */
-        .stButton>button {
-            background: #d4af37;
-            color: black;
-            border-radius: 50px;
-            border: none;
-            padding: 10px 25px;
-            font-weight: 700;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-        }
-        
-        /* Piilotetaan Streamlitin turhat osat */
-        header {visibility: hidden;}
+        /* Piilotetaan Streamlitin brändäys */
         #MainMenu {visibility: hidden;}
         footer {visibility: hidden;}
+        header {visibility: hidden;}
+        
+        /* Streamlitin omien painikkeiden tyylitys */
+        .stButton>button {
+            border-radius: 5px;
+            background-color: #1a1a1a;
+            color: #d4af37;
+            border: 1px solid #d4af37;
+            font-weight: 600;
+        }
         </style>
     """, unsafe_allow_html=True)
